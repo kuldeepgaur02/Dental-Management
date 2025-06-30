@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Stethoscope, User, Lock, AlertCircle } from 'lucide-react';
@@ -11,6 +11,71 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+
+  // Initialize hardcoded users in localStorage on component mount
+  useEffect(() => {
+    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    if (existingUsers.length === 0) {
+      const hardcodedUsers = [
+        { 
+          id: "u1", 
+          role: "Admin", 
+          email: "admin@entnt.in", 
+          password: "admin123",
+          name: "Dr. Smith",
+          createdAt: new Date().toISOString()
+        },
+        { 
+          id: "u2", 
+          role: "Patient", 
+          email: "john@entnt.in", 
+          password: "patient123", 
+          patientId: "p1",
+          name: "John Doe",
+          createdAt: new Date().toISOString()
+        }
+      ];
+      
+      const hardcodedPatients = [
+        {
+          id: "p1",
+          name: "John Doe",
+          email: "john@entnt.in",
+          dob: "1990-05-10",
+          contact: "1234567890",
+          address: "123 Main St, City",
+          emergencyContact: "0987654321",
+          healthInfo: "No allergies",
+          userId: "u2",
+          createdAt: new Date().toISOString()
+        }
+      ];
+
+      const hardcodedIncidents = [
+        {
+          id: "i1",
+          patientId: "p1",
+          title: "Toothache",
+          description: "Upper molar pain",
+          comments: "Sensitive to cold",
+          appointmentDate: "2025-07-01T10:00:00",
+          cost: 80,
+          treatment: "Root canal therapy",
+          status: "Completed",
+          nextDate: "2025-07-15T10:00:00",
+          files: [
+            { name: "invoice.pdf", url: "base64string-or-blob-url", type: "application/pdf" },
+            { name: "xray.png", url: "base64string-or-blob-url", type: "image/png" }
+          ],
+          createdAt: new Date().toISOString()
+        }
+      ];
+
+      localStorage.setItem('users', JSON.stringify(hardcodedUsers));
+      localStorage.setItem('patients', JSON.stringify(hardcodedPatients));
+      localStorage.setItem('incidents', JSON.stringify(hardcodedIncidents));
+    }
+  }, []);
 
   const validateForm = () => {
     const errors = {};
@@ -57,7 +122,7 @@ const Login = () => {
   };
 
   const demoCredentials = [
-    { role: 'Admin', email: 'admin@entnt.in', password: 'admin123' },
+    { role: 'Admin (Dentist)', email: 'admin@entnt.in', password: 'admin123' },
     { role: 'Patient', email: 'john@entnt.in', password: 'patient123' }
   ];
 
@@ -79,10 +144,10 @@ const Login = () => {
             <Stethoscope className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Dental Center Management
+            ENTNT Dental Center
           </h1>
           <p className="text-gray-600">
-            Sign in to access your dashboard
+            Management Dashboard - Sign in to continue
           </p>
         </div>
 
@@ -172,12 +237,12 @@ const Login = () => {
           {/* Registration Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
+              New patient?{' '}
               <Link
                 to="/register"
                 className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
               >
-                Create one here
+                Register here
               </Link>
             </p>
           </div>
@@ -197,6 +262,9 @@ const Login = () => {
                 </button>
               ))}
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              * Click to auto-fill credentials for testing
+            </p>
           </div>
         </div>
 
