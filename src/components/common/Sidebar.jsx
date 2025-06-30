@@ -9,8 +9,6 @@ import {
   Stethoscope,
   User,
   BarChart3,
-  Settings,
-  HelpCircle
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -32,14 +30,7 @@ const Sidebar = () => {
 
   const navItems = user?.role === 'Admin' ? adminNavItems : patientNavItems;
 
-  const bottomNavItems = [
-    { name: 'Settings', href: '/settings', icon: Settings },
-    { name: 'Help & Support', href: '/help', icon: HelpCircle },
-  ];
-
-  const isActive = (href) => {
-    return location.pathname === href;
-  };
+  const isActive = (href) => location.pathname === href;
 
   return (
     <div className="flex flex-col w-64 bg-white border-r border-gray-200 h-full">
@@ -60,7 +51,6 @@ const Sidebar = () => {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            
             return (
               <Link
                 key={item.name}
@@ -89,31 +79,6 @@ const Sidebar = () => {
           </div>
         </div>
       </nav>
-
-      {/* Bottom Navigation */}
-      <div className="px-4 py-4 border-t border-gray-200">
-        <div className="space-y-1">
-          {bottomNavItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  active
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <Icon size={18} />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
 
       {/* User Info */}
       <div className="px-4 py-4 bg-gray-50 border-t border-gray-200">
