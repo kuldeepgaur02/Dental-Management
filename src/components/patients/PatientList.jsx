@@ -67,16 +67,21 @@ const PatientList = () => {
       {/* Search and Stats */}
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search patients by name, email, or contact..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-input pl-10"
-            />
-          </div>
+<div className="relative">
+  <Search 
+    className="absolute left-3 top-1/2 -translate-y-1/2 transform text-gray-400 pointer-events-none" 
+    size={18} 
+  />
+  <input
+    type="text"
+    placeholder="Search patients by Name,Email or Contacts "
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="w-full py-2 px-4 pl-10 pr-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+  />
+</div>
+
+
         </div>
         <div className="flex gap-4">
           <div className="stat-card min-w-[150px]">
