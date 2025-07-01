@@ -2,14 +2,14 @@ import React from 'react';
 import { 
   Users, 
   Calendar, 
-  DollarSign, 
   Activity, 
   Clock, 
   CheckCircle, 
   AlertCircle,
   TrendingUp,
   Phone,
-  Mail
+  Mail,
+  IndianRupee
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -104,7 +104,7 @@ const Dashboard = () => {
         <StatCard
           title="Monthly Revenue"
           value={`₹${stats.monthlyRevenue}`}
-          icon={DollarSign}
+          icon={IndianRupee}
           color="green"
           change="+12% from last month"
         />
@@ -206,7 +206,7 @@ const Dashboard = () => {
 
         <div className="card">
           <div className="card-body text-center">
-            <DollarSign className="mx-auto mb-3 text-green-600" size={32} />
+            <IndianRupee className="mx-auto mb-3 text-green-600" size={32} />
             <h4 className="text-lg font-semibold text-gray-900">Total Revenue</h4>
             <p className="text-2xl font-bold text-green-600 mt-1">
               ₹{stats.totalRevenue}
@@ -273,7 +273,7 @@ const PatientDashboard = ({ patient, appointments }) => {
         <StatCard
           title="Total Spent"
           value={`₹${totalSpent}`}
-          icon={DollarSign}
+          icon={IndianRupee}
           color="green"
         />
       </div>
