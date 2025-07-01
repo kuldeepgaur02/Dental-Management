@@ -8,10 +8,12 @@ import Dashboard from './components/dashboard/Dashboard';
 import PatientList from './components/patients/PatientList';
 import PatientView from './components/patients/PatientView';
 import IncidentList from './components/incidents/IncidentList';
+import Analytics from './components/analytics/Analytics'; // Add this import
 import Header from './components/common/Header';
 import Sidebar from './components/common/Sidebar';
 import Loading from './components/common/Loading';
 import Calendar from './components/calender/Calender';
+
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { isAuthenticated, user, loading } = useAuth();
   
@@ -103,6 +105,16 @@ const AppContent = () => {
           <ProtectedRoute adminOnly>
             <AppLayout>
               <IncidentList />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute adminOnly>
+            <AppLayout>
+              <Analytics />
             </AppLayout>
           </ProtectedRoute>
         }
