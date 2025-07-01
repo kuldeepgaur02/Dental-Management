@@ -5,42 +5,42 @@ export const mockData = {
       role: "Admin",
       email: "admin@entnt.in",
       password: "admin123",
-      name: "Dr. Sarah Johnson",
+      name: "Dr. Anika Sharma",
       avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop&crop=face"
     },
     {
       id: "2",
       role: "Patient",
-      email: "john@entnt.in",
+      email: "shyam@entnt.in",
       password: "patient123",
       patientId: "p1",
-      name: "John Doe"
+      name: "Shyam kalyan"
     },
     {
       id: "3",
       role: "Patient",
-      email: "jane@entnt.in",
+      email: "jaspreet@entnt.in",
       password: "patient123",
       patientId: "p2",
-      name: "Jane Smith"
+      name: "Jaspreet Bhati"
     },
     {
       id: "4",
       role: "Patient",
-      email: "mike@entnt.in",
+      email: "gaurav@entnt.in",
       password: "patient123",
       patientId: "p3",
-      name: "Mike Johnson"
+      name: "Gaurav Kumar"
     }
   ],
   patients: [
     {
       id: "p1",
-      name: "John Doe",
+      name: "Shyam kalyan",
       dob: "1990-05-10",
       contact: "1234567890",
-      email: "john@entnt.in",
-      address: "123 Main St, Springfield, IL",
+      email: "shyam@entnt.in",
+      address: "123 Main St, Delhi,India",
       healthInfo: "No allergies, Previous root canal treatment",
       emergencyContact: "9876543210",
       bloodGroup: "O+",
@@ -48,11 +48,11 @@ export const mockData = {
     },
     {
       id: "p2",
-      name: "Jane Smith",
+      name: "Jaspreet Bhati",
       dob: "1985-08-22",
       contact: "2345678901",
-      email: "jane@entnt.in",
-      address: "456 Oak Ave, Springfield, IL",
+      email: "jaspreet@entnt.in",
+      address: "456 prem nagar, Delhi,India",
       healthInfo: "Allergic to penicillin, Diabetes Type 2",
       emergencyContact: "8765432109",
       bloodGroup: "A+",
@@ -60,11 +60,11 @@ export const mockData = {
     },
     {
       id: "p3",
-      name: "Mike Johnson",
+      name: "Gaurav Kumar",
       dob: "1992-12-03",
       contact: "3456789012",
-      email: "mike@entnt.in",
-      address: "789 Pine St, Springfield, IL",
+      email: "gaurav@entnt.in",
+      address: "789 Dwarka expressway ,Delhi, India",
       healthInfo: "No known allergies, Regular smoker",
       emergencyContact: "7654321098",
       bloodGroup: "B+",
@@ -72,11 +72,11 @@ export const mockData = {
     },
     {
       id: "p4",
-      name: "Emily Davis",
+      name: "Ruhani Arora",
       dob: "1988-07-14",
       contact: "4567890123",
-      email: "emily@entnt.in",
-      address: "321 Elm St, Springfield, IL",
+      email: "ruhani@entnt.in",
+      address: "3 Shahadra,Delhi, India",
       healthInfo: "Hypertension, No drug allergies",
       emergencyContact: "6543210987",
       bloodGroup: "AB+",
