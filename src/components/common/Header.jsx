@@ -138,29 +138,118 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Generate notifications from recent incidents
+  // Generate notifications for appointment status changes and same-day appointments
   const generateNotifications = () => {
     const now = new Date();
-    const upcomingAppointments = incidents
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    
+    // Same-day appointments
+    const todayAppointments = incidents
       .filter(incident => {
         const appointmentDate = new Date(incident.appointmentDate);
-        const timeDiff = appointmentDate.getTime() - now.getTime();
-        return timeDiff > 0 && timeDiff <= 24 * 60 * 60 * 1000; // Next 24 hours
+        return appointmentDate >= today && appointmentDate < tomorrow;
       })
       .map(incident => {
         const patient = patients.find(p => p.id === incident.patientId);
         const appointmentDate = new Date(incident.appointmentDate);
-        const timeDiff = Math.ceil((appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+        const timeString = appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timeDiff = appointmentDate.getTime() - now.getTime();
+        const hoursUntil = Math.ceil(timeDiff / (1000 * 60 * 60));
+        
+        let timeMessage;
+        if (timeDiff < 0) {
+          timeMessage = 'ongoing';
+        } else if (hoursUntil <= 1) {
+          const minutesUntil = Math.ceil(timeDiff / (1000 * 60));
+          timeMessage = `in ${minutesUntil} minute${minutesUntil > 1 ? 's' : ''}`;
+        } else {
+          timeMessage = `at ${timeString}`;
+        }
         
         return {
-          id: `notif_${incident.id}`,
-          title: 'Upcoming Appointment',
+          id: `today_${incident.id}`,
+          title: 'Today\'s Appointment',
           message: `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
-          time: `in ${timeDiff} hour${timeDiff > 1 ? 's' : ''}`,
-          unread: true
+          time: timeMessage,
+          unread: true,
+          priority: timeDiff < 60 * 60 * 1000 ? 'high' : 'normal', // High priority if within 1 hour
+          status: incident.status
         };
       });
 
+    // Status change notifications (simulated based on recent updates)
+    const statusChangeNotifications = incidents
+      .filter(incident => {
+        // Simulate recent status changes by checking incidents modified in last 24 hours
+        // In real app, you'd track actual status changes with timestamps
+        const createdDate = new Date(incident.createdAt);
+        const timeDiff = now.getTime() - createdDate.getTime();
+        return timeDiff <= 24 * 60 * 60 * 1000 && incident.status !== 'Scheduled';
+      })
+      .map(incident => {
+        const patient = patients.find(p => p.id === incident.patientId);
+        let statusIcon, statusColor, statusMessage;
+        
+        switch (incident.status) {
+          case 'Completed':
+            statusIcon = '✅';
+            statusColor = 'text-green-600';
+            statusMessage = 'Treatment completed';
+            break;
+          case 'In Progress':
+            statusIcon = '🔄';
+            statusColor = 'text-blue-600';
+            statusMessage = 'Treatment in progress';
+            break;
+          case 'Cancelled':
+            statusIcon = '❌';
+            statusColor = 'text-red-600';
+            statusMessage = 'Appointment cancelled';
+            break;
+          default:
+            statusIcon = '📋';
+            statusColor = 'text-gray-600';
+            statusMessage = 'Status updated';
+        }
+        
+        return {
+          id: `status_${incident.id}`,
+          title: 'Status Update',
+          message: `${patient?.name || 'Unknown Patient'} - ${statusMessage}`,
+          time: 'recently',
+          unread: true,
+          priority: 'normal',
+          statusIcon,
+          statusColor,
+          treatment: incident.title
+        };
+      });
+
+    // Upcoming appointments (next 2-24 hours)
+    const upcomingAppointments = incidents
+      .filter(incident => {
+        const appointmentDate = new Date(incident.appointmentDate);
+        const timeDiff = appointmentDate.getTime() - now.getTime();
+        return timeDiff > 2 * 60 * 60 * 1000 && timeDiff <= 24 * 60 * 60 * 1000; // 2-24 hours ahead
+      })
+      .map(incident => {
+        const patient = patients.find(p => p.id === incident.patientId);
+        const appointmentDate = new Date(incident.appointmentDate);
+        const hoursUntil = Math.ceil((appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+        
+        return {
+          id: `upcoming_${incident.id}`,
+          title: 'Upcoming Appointment',
+          message: `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
+          time: `in ${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`,
+          unread: true,
+          priority: 'normal',
+          status: incident.status
+        };
+      });
+
+    // New patient registrations
     const recentPatients = patients
       .filter(patient => {
         const createdDate = new Date(patient.createdAt);
@@ -172,10 +261,26 @@ const Header = () => {
         title: 'New Patient Registration',
         message: `${patient.name} registered as a new patient`,
         time: 'today',
-        unread: true
+        unread: true,
+        priority: 'normal'
       }));
 
-    return [...upcomingAppointments, ...recentPatients].slice(0, 5);
+    // Combine and sort notifications by priority and time
+    const allNotifications = [
+      ...todayAppointments,
+      ...statusChangeNotifications,
+      ...upcomingAppointments,
+      ...recentPatients
+    ];
+
+    // Sort by priority (high first) then by time
+    allNotifications.sort((a, b) => {
+      if (a.priority === 'high' && b.priority !== 'high') return -1;
+      if (b.priority === 'high' && a.priority !== 'high') return 1;
+      return 0;
+    });
+
+    return allNotifications.slice(0, 6);
   };
 
   const notifications = generateNotifications();
@@ -298,9 +403,11 @@ const Header = () => {
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <Bell size={20} className="text-gray-600" />
+              <Bell size={20} className={`${notifications.some(n => n.priority === 'high') ? 'text-red-500 animate-pulse' : 'text-gray-600'}`} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className={`absolute -top-1 -right-1 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
+                  notifications.some(n => n.priority === 'high') ? 'bg-red-500 animate-pulse' : 'bg-blue-500'
+                }`}>
                   {unreadCount}
                 </span>
               )}
@@ -317,24 +424,62 @@ const Header = () => {
                     notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
+                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
                           notification.unread ? 'bg-blue-50' : ''
-                        }`}
+                        } ${notification.priority === 'high' ? 'border-l-4 border-l-red-500' : ''}`}
                       >
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 text-sm">
-                              {notification.title}
-                            </h4>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className={`font-medium text-sm ${
+                                notification.priority === 'high' ? 'text-red-800' : 'text-gray-900'
+                              }`}>
+                                {notification.title}
+                                {notification.priority === 'high' && (
+                                  <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                                    URGENT
+                                  </span>
+                                )}
+                              </h4>
+                              {notification.statusIcon && (
+                                <span className="text-sm">{notification.statusIcon}</span>
+                              )}
+                            </div>
+                            <p className={`text-sm mt-1 ${
+                              notification.statusColor || 'text-gray-600'
+                            }`}>
                               {notification.message}
                             </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              {notification.time}
-                            </p>
+                            {notification.treatment && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Treatment: {notification.treatment}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between mt-2">
+                              <p className={`text-xs ${
+                                notification.priority === 'high' ? 'text-red-600 font-medium' : 'text-gray-500'
+                              }`}>
+                                {notification.time}
+                              </p>
+                              {notification.status && (
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  notification.status === 'Completed' 
+                                    ? 'bg-green-100 text-green-700'
+                                    : notification.status === 'In Progress'
+                                      ? 'bg-blue-100 text-blue-700'
+                                      : notification.status === 'Scheduled'
+                                        ? 'bg-yellow-100 text-yellow-700'
+                                        : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {notification.status}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           {notification.unread && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <div className={`w-2 h-2 rounded-full ${
+                              notification.priority === 'high' ? 'bg-red-500' : 'bg-blue-500'
+                            }`}></div>
                           )}
                         </div>
                       </div>
