@@ -21,12 +21,6 @@ const Calendar = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
 
-  // Debug: Log incidents whenever they change
-  useEffect(() => {
-    console.log('Calendar - Current incidents:', incidents);
-    console.log('Calendar - Current patients:', patients);
-  }, [incidents, patients]);
-
   // Helper function to normalize dates for comparison
   const normalizeDate = (date) => {
     if (!date) return null;
@@ -44,52 +38,35 @@ const Calendar = () => {
       filtered = filtered.filter(incident => incident.status === filterStatus);
     }
     
-    console.log('Filtered incidents:', filtered);
     return filtered;
   };
 
   // Get incidents for a specific date - FIXED VERSION
-const getIncidentsForDate = (date) => {
-  const filtered = getFilteredIncidents();
-  const targetDateNormalized = normalizeDate(date);
-  
-  if (!targetDateNormalized) return [];
-  
-  const dateIncidents = filtered.filter(incident => {
-    const appointmentDate = incident.appointmentDate || incident.date || incident.scheduledDate;
+  const getIncidentsForDate = (date) => {
+    const filtered = getFilteredIncidents();
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
     
-    if (!appointmentDate) {
-      console.log('No appointment date found for incident:', incident);
-      return false;
-    }
-    
-    const incidentDateNormalized = normalizeDate(appointmentDate);
-    
-    if (!incidentDateNormalized) {
-      console.log('Could not normalize incident date:', appointmentDate);
-      return false;
-    }
-    
-    const isSame = incidentDateNormalized.getTime() === targetDateNormalized.getTime();
-    
-    console.log('Comparing dates:', {
-      incidentDate: appointmentDate,
-      normalizedIncidentDate: incidentDateNormalized.toDateString(),
-      targetDate: targetDateNormalized.toDateString(),
-      isSame,
+    const dateIncidents = filtered.filter(incident => {
+      // Check all possible date fields
+      const appointmentDate = incident.appointmentDate || incident.date || incident.scheduledDate;
+      
+      if (!appointmentDate) {
+        return false;
+      }
+      
+      const incidentDate = new Date(appointmentDate);
+      incidentDate.setHours(0, 0, 0, 0);
+      
+      return incidentDate.getTime() === targetDate.getTime();
+    }).sort((a, b) => {
+      const dateA = new Date(a.appointmentDate || a.date || a.scheduledDate);
+      const dateB = new Date(b.appointmentDate || b.date || b.scheduledDate);
+      return dateA - dateB;
     });
     
-    return isSame;
-  }).sort((a, b) => {
-    const dateA = new Date(a.appointmentDate || a.date || a.scheduledDate);
-    const dateB = new Date(b.appointmentDate || b.date || b.scheduledDate);
-    return dateA - dateB;
-  });
-  
-  console.log(`Incidents for ${date.toDateString()}:`, dateIncidents);
-  return dateIncidents;
-};
-
+    return dateIncidents;
+  };
 
   // Navigation functions
   const navigateDate = (direction) => {
@@ -108,8 +85,6 @@ const getIncidentsForDate = (date) => {
 
   // Add appointment handler - FIXED
   const handleAddIncident = async (incidentData) => {
-    console.log('handleAddIncident called with:', incidentData);
-    
     try {
       // Ensure the appointment date is properly set
       const appointmentData = {
@@ -120,17 +95,15 @@ const getIncidentsForDate = (date) => {
         updatedAt: new Date().toISOString()
       };
       
-      console.log('Adding appointment with data:', appointmentData);
       await addIncident(appointmentData);
       setShowAddModal(false);
       setSelectedDate(null);
-      console.log('Appointment added successfully');
     } catch (error) {
       console.error('Error in handleAddIncident:', error);
     }
   };
 
-  // Month view component - ENHANCED DEBUG VERSION
+  // Month view component
   const MonthView = () => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -179,13 +152,6 @@ const getIncidentsForDate = (date) => {
                   }`}>
                     {day.getDate()}
                   </div>
-                  
-                  {/* DEBUG: Show incident count */}
-                  {dayIncidents.length > 0 && (
-                    <div className="text-xs text-red-600 font-bold mb-1">
-                      {dayIncidents.length} appointments
-                    </div>
-                  )}
                   
                   <div className="space-y-1">
                     {dayIncidents.slice(0, 3).map((incident) => {
@@ -409,13 +375,10 @@ const getIncidentsForDate = (date) => {
   };
 
   const handleEditIncident = async (updatedIncident) => {
-    console.log('handleEditIncident called with:', updatedIncident);
-    
     try {
       await updateIncident(selectedIncident.id, updatedIncident);
       setShowEditModal(false);
       setSelectedIncident(null);
-      console.log('Incident updated successfully');
     } catch (error) {
       console.error('Error in handleEditIncident:', error);
     }
@@ -448,32 +411,6 @@ const getIncidentsForDate = (date) => {
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Debug Panel */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h3 className="font-medium text-yellow-800 mb-2">Debug Info:</h3>
-        <p className="text-sm text-yellow-700">Total incidents: {incidents?.length || 0}</p>
-        <p className="text-sm text-yellow-700">Total patients: {patients?.length || 0}</p>
-        <p className="text-sm text-yellow-700">Current filter: {filterStatus}</p>
-        <p className="text-sm text-yellow-700">Current view: {view}</p>
-        <p className="text-sm text-yellow-700">Current date: {currentDate.toDateString()}</p>
-        <div className="mt-2">
-          <p className="text-sm text-yellow-700">All incidents with dates:</p>
-          <div className="text-xs text-yellow-600 mt-1 max-h-32 overflow-y-auto bg-yellow-100 p-2 rounded">
-            {incidents?.map((incident, index) => (
-              <div key={index}>
-                ID: {incident.id} | Date: {incident.appointmentDate || incident.date || incident.scheduledDate || 'NO DATE'} | Status: {incident.status} | Title: {incident.title}
-              </div>
-            )) || 'No incidents'}
-          </div>
-        </div>
-        <div className="mt-2">
-          <p className="text-sm text-yellow-700">Incidents for today ({new Date().toDateString()}):</p>
-          <div className="text-xs text-yellow-600 bg-yellow-100 p-2 rounded">
-            {getIncidentsForDate(new Date()).length} incidents found
-          </div>
-        </div>
-      </div>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
