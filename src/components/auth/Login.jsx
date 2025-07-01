@@ -22,16 +22,16 @@ const Login = () => {
           role: "Admin", 
           email: "admin@entnt.in", 
           password: "admin123",
-          name: "Dr. Smith",
+          name: "Dr. Anika Sharma",
           createdAt: new Date().toISOString()
         },
         { 
           id: "u2", 
           role: "Patient", 
-          email: "john@entnt.in", 
+          email: "shyam@entnt.in", 
           password: "patient123", 
           patientId: "p1",
-          name: "John Doe",
+          name: "Shyam kalyan",
           createdAt: new Date().toISOString()
         }
       ];
@@ -39,11 +39,11 @@ const Login = () => {
       const hardcodedPatients = [
         {
           id: "p1",
-          name: "John Doe",
-          email: "john@entnt.in",
+          name: "Shyam kalyan",
+          email: "shyam@entnt.in",
           dob: "1990-05-10",
           contact: "1234567890",
-          address: "123 Main St, City",
+          address: "123 Main St, Delhi,India",
           emergencyContact: "0987654321",
           healthInfo: "No allergies",
           userId: "u2",
@@ -123,7 +123,7 @@ const Login = () => {
 
   const demoCredentials = [
     { role: 'Admin (Dentist)', email: 'admin@entnt.in', password: 'admin123' },
-    { role: 'Patient', email: 'john@entnt.in', password: 'patient123' }
+    { role: 'Patient', email: 'shyam@entnt.in', password: 'patient123' }
   ];
 
   const fillDemoCredentials = (credentials) => {

@@ -182,7 +182,7 @@ const PatientList = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${stats.totalSpent.toFixed(2)}
+                        ₹{stats.totalSpent.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm text-gray-500">
