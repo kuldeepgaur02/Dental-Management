@@ -141,16 +141,20 @@ const IncidentList = () => {
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Search */}
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search appointments, patients, or treatments..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="form-input pl-10"
-                />
-              </div>
+              <div className="relative ">
+              <Search 
+                className="absolute left-3 top-1/2 -translate-y-1/2 transform text-gray-400 pointer-events-none" 
+                size={16} 
+              />
+              <input
+                type="text"
+                placeholder="Search appointments, patients, or treatments..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full py-2 px-4 pl-10 pr-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
             </div>
 
             {/* Status Filter */}
