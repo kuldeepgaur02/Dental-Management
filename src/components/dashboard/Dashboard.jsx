@@ -103,7 +103,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Monthly Revenue"
-          value={`$${stats.monthlyRevenue}`}
+          value={`₹${stats.monthlyRevenue}`}
           icon={DollarSign}
           color="green"
           change="+12% from last month"
@@ -181,7 +181,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">${patient.totalSpent}</p>
+                      <p className="font-medium text-gray-900">₹{patient.totalSpent}</p>
                     </div>
                   </div>
                 ))}
@@ -209,7 +209,7 @@ const Dashboard = () => {
             <DollarSign className="mx-auto mb-3 text-green-600" size={32} />
             <h4 className="text-lg font-semibold text-gray-900">Total Revenue</h4>
             <p className="text-2xl font-bold text-green-600 mt-1">
-              ${stats.totalRevenue}
+              ₹{stats.totalRevenue}
             </p>
             <p className="text-sm text-gray-600">All time earnings</p>
           </div>
@@ -272,7 +272,7 @@ const PatientDashboard = ({ patient, appointments }) => {
         />
         <StatCard
           title="Total Spent"
-          value={`$${totalSpent}`}
+          value={`₹${totalSpent}`}
           icon={DollarSign}
           color="green"
         />
@@ -379,7 +379,7 @@ const PatientDashboard = ({ patient, appointments }) => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">${appointment.cost}</p>
+                      <p className="font-medium text-gray-900">₹{appointment.cost}</p>
                       <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
                         Completed
                       </span>
