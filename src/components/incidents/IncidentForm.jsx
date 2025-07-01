@@ -250,23 +250,23 @@ const IncidentForm = ({ incident, patientId, initialDate, onSubmit, onCancel }) 
       {/* Treatment Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="cost" className="block text-sm font-medium text-gray-700 mb-2">
-            <DollarSign className="inline w-4 h-4 mr-1" />
-            Treatment Cost
-          </label>
-          <input
-            type="number"
-            id="cost"
-            name="cost"
-            min="0"
-            step="0.01"
-            value={formData.cost}
-            onChange={handleInputChange}
-            className={`form-input ${errors.cost ? 'border-red-500' : ''}`}
-            placeholder="0.00"
-          />
-          {errors.cost && <p className="mt-1 text-sm text-red-600">{errors.cost}</p>}
-        </div>
+        <label htmlFor="cost" className="block text-sm font-medium text-gray-700 mb-2">
+          <span className="inline-block w-4 h-4 mr-1 text-gray-600">₹</span>
+          Treatment Cost
+        </label>
+        <input
+          type="number"
+          id="cost"
+          name="cost"
+          min="0"
+          step="0.01"
+          value={formData.cost}
+          onChange={handleInputChange}
+          className={`form-input ${errors.cost ? 'border-red-500' : ''}`}
+          placeholder="0.00"
+        />
+        {errors.cost && <p className="mt-1 text-sm text-red-600">{errors.cost}</p>}
+      </div>
 
         <div>
           <label htmlFor="nextDate" className="block text-sm font-medium text-gray-700 mb-2">

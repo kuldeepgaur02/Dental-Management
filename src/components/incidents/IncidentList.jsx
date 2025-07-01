@@ -340,13 +340,13 @@ const IncidentList = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-  <div className="flex items-center gap-1">
-    <span className="text-gray-400 text-sm">₹</span>
-    <span className="text-sm font-medium text-gray-900">
-      {incident.cost ? `${incident.cost}` : '-'}
-    </span>
-  </div>
-</td>
+                      <div className="flex items-center gap-1">
+                        <span className="text-gray-400 text-sm">₹</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {incident.cost ? `${incident.cost}` : '-'}
+                        </span>
+                      </div>
+                    </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
