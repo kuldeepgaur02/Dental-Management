@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
-import { Calendar, Users, TrendingUp, Activity, Clock, FileText, Heart, Award, Target } from 'lucide-react';
+import { Calendar, Users,DollarSign, TrendingUp, Activity, Clock, FileText, Heart, Award, Target } from 'lucide-react';
 import { mockData } from "../../data/mockData";
 
 const Analytics = () => {
