@@ -208,10 +208,8 @@ const PatientView = () => {
                             {formatDateTime(incident.appointmentDate)}
                           </span>
                           {incident.cost && (
-                            <span className="flex items-center gap-1">
-                              <DollarSign size={12} />
-                              ${incident.cost}
-                            </span>
+                            <span className="text-xs font-medium">₹{incident.cost}</span>
+
                           )}
                           {incident.files && incident.files.length > 0 && (
                             <span className="flex items-center gap-1">
@@ -270,9 +268,10 @@ const PatientView = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-700">Total Spent</p>
-                    <p className="text-2xl font-bold text-blue-900">${stats.totalSpent}</p>
+                    <p className="text-2xl font-bold text-blue-900">₹{stats.totalSpent}</p>
                   </div>
-                  <DollarSign className="h-8 w-8 text-blue-600" />
+                 <span className="h-8 w-8 text-blue-600 text-2xl font-bold">₹</span>
+
                 </div>
               </div>
             </div>
