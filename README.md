@@ -54,7 +54,7 @@ A comprehensive dental center management dashboard built with React, Vite, and T
 - **Date Handling**: JavaScript Date API
 - **File Handling**: Base64 encoding for localStorage
 - **Build Tool**: Vite
-- **Deployment**: Vercel/Netlify/GitHub Pages
+- **Deployment**: Vercel
 
 ## 📁 Project Structure
 
