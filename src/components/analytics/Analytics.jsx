@@ -1,19 +1,23 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Calendar, Users,DollarSign, TrendingUp, Activity, Clock, FileText, Heart, Award, Target } from 'lucide-react';
-import { mockData } from "../../data/mockData";
+import { getInitialData } from "../../data/mockData";
 
 const Analytics = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
 
-  // Analytics calculations
+  // Analytics calculations using localStorage data
   const analytics = useMemo(() => {
-    const { patients, incidents } = mockData;
+    // Get fresh data from localStorage
+    const { patients, incidents } = getInitialData();
     
     // Total metrics
     const totalPatients = patients.length;
     const totalIncidents = incidents.length;
-    const totalRevenue = incidents.reduce((sum, incident) => sum + incident.cost, 0);
+    const totalRevenue = incidents
+  .filter(incident => incident.status === 'Completed')
+  .reduce((sum, incident) => sum + incident.cost, 0);
+
     const completedIncidents = incidents.filter(i => i.status === 'Completed').length;
     
     // Status distribution
@@ -42,15 +46,40 @@ const Analytics = () => {
     }));
     
     // Monthly trends (simulated)
-    const monthlyData = [
-      { month: 'Jan', patients: 15, revenue: 4500, appointments: 25 },
-      { month: 'Feb', revenue: 5200, appointments: 28 },
-      { month: 'Mar', patients: 18, revenue: 6100, appointments: 32 },
-      { month: 'Apr', patients: 20, revenue: 5800, appointments: 30 },
-      { month: 'May', patients: 22, revenue: 6500, appointments: 35 },
-      { month: 'Jun', patients: 25, revenue: 7200, appointments: 38 },
-      { month: 'Jul', patients: totalPatients, revenue: totalRevenue, appointments: totalIncidents }
-    ];
+const currentYear = new Date().getFullYear();
+
+// Initialize 12 months
+const monthlyDataMap = Array.from({ length: 12 }, (_, i) => ({
+  month: new Date(currentYear, i).toLocaleString('default', { month: 'short' }),
+  patients: 0,
+  revenue: 0,
+  appointments: 0
+}));
+
+// Count patients created per month
+patients.forEach((patient) => {
+  const date = new Date(patient.createdAt);
+  if (date.getFullYear() === currentYear) {
+    const monthIndex = date.getMonth();
+    monthlyDataMap[monthIndex].patients += 1;
+  }
+});
+
+// Count appointments and revenue per month
+incidents.forEach((incident) => {
+  const date = new Date(incident.appointmentDate);
+  if (date.getFullYear() === currentYear) {
+    const monthIndex = date.getMonth();
+    monthlyDataMap[monthIndex].appointments += 1;
+
+    if (incident.status === "Completed") {
+      monthlyDataMap[monthIndex].revenue += incident.cost;
+    }
+  }
+});
+
+const monthlyData = monthlyDataMap;
+
     
     // Patient demographics
     const ageGroups = patients.reduce((acc, patient) => {
@@ -88,8 +117,8 @@ const Analytics = () => {
         totalIncidents,
         totalRevenue,
         completedIncidents,
-        successRate: Math.round((completedIncidents / totalIncidents) * 100),
-        avgRevenuePerPatient: Math.round(totalRevenue / totalPatients)
+        successRate: totalIncidents > 0 ? Math.round((completedIncidents / totalIncidents) * 100) : 0,
+        avgRevenuePerPatient: totalPatients > 0 ? Math.round(totalRevenue / totalPatients) : 0
       },
       statusChartData,
       revenueChartData,
@@ -204,7 +233,7 @@ const Analytics = () => {
               Revenue Trends
             </h3>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={analytics.monthlyData}>
+              <AreaChart data={analytics.monthlyData}> 
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="month" stroke="#6B7280" />
                 <YAxis stroke="#6B7280" />
@@ -319,7 +348,7 @@ const Analytics = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Avg Revenue/Patient</span>
-                <span className="font-semibold text-gray-900">${analytics.totals.avgRevenuePerPatient}</span>
+                <span className="font-semibold text-gray-900">₹{analytics.totals.avgRevenuePerPatient}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Completion Rate</span>
@@ -351,7 +380,7 @@ const Analytics = () => {
                       <div 
                         className="h-full rounded-full"
                         style={{ 
-                          width: `${(item.count / analytics.totals.totalPatients) * 100}%`,
+                          width: `${analytics.totals.totalPatients > 0 ? (item.count / analytics.totals.totalPatients) * 100 : 0}%`,
                           backgroundColor: chartColors[index % chartColors.length]
                         }}
                       />
