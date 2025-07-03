@@ -1,172 +1,260 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon,
-  Clock, User, Phone, MapPin, Eye, Edit, Filter
-} from 'lucide-react';
-import { useData } from '../../context/DataContext';
-import { useAuth } from '../../context/AuthContext';
-import { formatDate, formatTime, isToday, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, format, addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, getDay } from '../../utils/dateUtils';
-import Modal from '../common/Modal';
-import IncidentForm from '../incidents/IncidentForm';
+import React, { useState, useEffect } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Calendar as CalendarIcon,
+  Clock,
+  User,
+  Phone,
+  MapPin,
+  Eye,
+  Edit,
+  Filter,
+  Search,
+  X,
+} from "lucide-react";
+import { useData } from "../../context/DataContext";
+import { useAuth } from "../../context/AuthContext";
+import {
+  formatDate,
+  formatTime,
+  isToday,
+  isSameDay,
+  format,
+  addDays,
+  subDays,
+} from "../../utils/dateUtils";
+import Modal from "../common/Modal";
+import IncidentForm from "../incidents/IncidentForm";
 
 const Calendar = () => {
-  const { incidents, patients, addIncident, updateIncident, getPatientById } = useData();
+  const { incidents, patients, addIncident, updateIncident, getPatientById } =
+    useData();
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState('month'); // 'month', 'week', 'day'
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Helper function to get the appointment date from an incident
+  const getIncidentDate = (incident) => {
+    return incident?.appointmentDate
+      ? new Date(incident.appointmentDate)
+      : null;
+  };
 
   // Helper function to normalize dates for comparison
   const normalizeDate = (date) => {
     if (!date) return null;
     const d = new Date(date);
-    // Reset time to start of day for date comparison
     d.setHours(0, 0, 0, 0);
-    return d;
+    return d.toISOString().split("T")[0];
   };
 
-  // Get incidents for display
+  // Get filtered incidents
   const getFilteredIncidents = () => {
     let filtered = incidents || [];
-    
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(incident => incident.status === filterStatus);
+
+    // Filter by status
+    if (filterStatus !== "all") {
+      filtered = filtered.filter(
+        (incident) => incident.status === filterStatus
+      );
     }
-    
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((incident) => {
+        const patient = getPatientById(incident.patientId);
+        const searchTerm = searchQuery.toLowerCase();
+        return (
+          incident.title?.toLowerCase().includes(searchTerm) ||
+          patient?.name?.toLowerCase().includes(searchTerm) ||
+          incident.description?.toLowerCase().includes(searchTerm)
+        );
+      });
+    }
+
     return filtered;
   };
 
-  // Get incidents for a specific date - FIXED VERSION
+  // Get incidents for the current date
   const getIncidentsForDate = (date) => {
     const filtered = getFilteredIncidents();
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
-    
-    const dateIncidents = filtered.filter(incident => {
-      // Check all possible date fields
-      const appointmentDate = incident.appointmentDate || incident.date || incident.scheduledDate;
-      
-      if (!appointmentDate) {
-        return false;
+    const target = normalizeDate(date);
+
+    const seen = new Set();
+    const result = [];
+
+    for (const incident of filtered) {
+      const incidentDate = normalizeDate(getIncidentDate(incident));
+      if (incidentDate === target && !seen.has(incident.id)) {
+        result.push(incident);
+        seen.add(incident.id);
       }
-      
-      const incidentDate = new Date(appointmentDate);
-      incidentDate.setHours(0, 0, 0, 0);
-      
-      return incidentDate.getTime() === targetDate.getTime();
-    }).sort((a, b) => {
-      const dateA = new Date(a.appointmentDate || a.date || a.scheduledDate);
-      const dateB = new Date(b.appointmentDate || b.date || b.scheduledDate);
-      return dateA - dateB;
-    });
-    
-    return dateIncidents;
+    }
+
+    return result.sort(
+      (a, b) => new Date(getIncidentDate(a)) - new Date(getIncidentDate(b))
+    );
   };
 
   // Navigation functions
   const navigateDate = (direction) => {
-    if (view === 'month') {
-      setCurrentDate(direction === 'prev' ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
-    } else if (view === 'week') {
-      setCurrentDate(direction === 'prev' ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(direction === 'prev' ? subDays(currentDate, 1) : addDays(currentDate, 1));
-    }
+    setCurrentDate(
+      direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1)
+    );
   };
 
   const goToToday = () => {
     setCurrentDate(new Date());
   };
 
-  // Add appointment handler - FIXED
-  const handleAddIncident = async (incidentData) => {
+  // Go to specific date
+  const goToDate = (date) => {
+    setCurrentDate(new Date(date));
+  };
+
+  // Handle add appointment
+  const handleAddIncident = () => {
+    setShowAddModal(false);
+    setSelectedDate(null);
+  };
+
+  // Handle edit incident
+  const handleEditIncident = async (updatedIncident) => {
     try {
-      // Ensure the appointment date is properly set
-      const appointmentData = {
-        ...incidentData,
-        appointmentDate: incidentData.appointmentDate || selectedDate,
-        status: incidentData.status || 'Scheduled',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      await addIncident(appointmentData);
-      setShowAddModal(false);
-      setSelectedDate(null);
+      await updateIncident(updatedIncident);
+      setShowEditModal(false);
+      setSelectedIncident(null);
     } catch (error) {
-      console.error('Error in handleAddIncident:', error);
+      console.error("Error in handleEditIncident:", error);
     }
   };
 
-  // Month view component
-  const MonthView = () => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
-    
-    const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
-    const weeks = [];
-    
-    for (let i = 0; i < dateRange.length; i += 7) {
-      weeks.push(dateRange.slice(i, i + 7));
-    }
+  // Enhanced Day view component
+  const DayView = () => {
+    const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM to 8 PM
+    const dayIncidents = getIncidentsForDate(currentDate);
 
     return (
       <div className="bg-white rounded-lg shadow">
-        {/* Calendar Header */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="bg-gray-50 py-2 text-center text-sm font-medium text-gray-500">
-              {day}
+        {/* Day Header with enhanced info */}
+        <div className="border-b border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                {format(currentDate, "EEEE")}
+              </div>
+              <div
+                className={`text-4xl font-bold mt-1 ${
+                  isToday(currentDate) ? "text-blue-600" : "text-gray-900"
+                }`}
+              >
+                {currentDate.getDate()}
+              </div>
+              <div className="text-lg text-gray-600 mt-1">
+                {format(currentDate, "MMMM yyyy")}
+              </div>
             </div>
-          ))}
+
+            {/* Day Summary */}
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Total Appointments</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {dayIncidents.length}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {dayIncidents.filter((i) => i.status === "Completed").length}{" "}
+                completed
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Calendar Body */}
-        <div className="grid grid-cols-7 gap-px bg-gray-200">
-          {weeks.map((week, weekIndex) =>
-            week.map((day, dayIndex) => {
-              const dayIncidents = getIncidentsForDate(day);
-              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-              const isCurrentDay = isToday(day);
-              
+        {/* Day Body with improved layout */}
+        <div className="max-h-[700px] overflow-y-auto">
+          {dayIncidents.length === 0 ? (
+            <div className="text-center py-16">
+              <CalendarIcon size={48} className="mx-auto text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No appointments today
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Start by adding your first appointment for{" "}
+                {format(currentDate, "MMMM d, yyyy")}
+              </p>
+              <button
+                onClick={() => {
+                  setSelectedDate(new Date(currentDate));
+                  setShowAddModal(true);
+                }}
+                className="btn-primary flex items-center gap-2 mx-auto"
+              >
+                <Plus size={16} />
+                Add Appointment
+              </button>
+            </div>
+          ) : (
+            hours.map((hour) => {
+              const hourIncidents = dayIncidents.filter((incident) => {
+                const appointmentDate = getIncidentDate(incident);
+                if (!appointmentDate) return false;
+                const incidentHour = new Date(appointmentDate).getHours();
+                return incidentHour === hour;
+              });
+
               return (
                 <div
-                  key={`${weekIndex}-${dayIndex}`}
-                  className={`bg-white min-h-[120px] p-2 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    !isCurrentMonth ? 'text-gray-400 bg-gray-50' : ''
-                  } ${isCurrentDay ? 'bg-blue-50' : ''}`}
-                  onClick={() => {
-                    setSelectedDate(day);
-                    setShowAddModal(true);
-                  }}
+                  key={hour}
+                  className="flex border-b border-gray-100 hover:bg-gray-50"
                 >
-                  <div className={`text-sm font-medium mb-1 ${
-                    isCurrentDay ? 'text-blue-600' : isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
-                    {day.getDate()}
+                  <div className="w-24 py-4 px-4 text-sm text-gray-500 font-medium border-r border-gray-100 bg-gray-50">
+                    <div className="text-center">
+                      {hour === 12
+                        ? "12 PM"
+                        : hour > 12
+                        ? `${hour - 12} PM`
+                        : `${hour} AM`}
+                    </div>
                   </div>
-                  
-                  <div className="space-y-1">
-                    {dayIncidents.slice(0, 3).map((incident) => {
+                  <div
+                    className="flex-1 min-h-[80px] p-4 cursor-pointer transition-colors relative"
+                    onClick={() => {
+                      const selectedDateTime = new Date(currentDate);
+                      selectedDateTime.setHours(hour, 0, 0, 0);
+                      setSelectedDate(selectedDateTime);
+                      setShowAddModal(true);
+                    }}
+                  >
+                    {hourIncidents.length === 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <div className="text-gray-400 text-sm flex items-center gap-2">
+                          <Plus size={16} />
+                          Add appointment
+                        </div>
+                      </div>
+                    )}
+
+                    {hourIncidents.map((incident) => {
                       const patient = getPatientById(incident.patientId);
-                      const appointmentDate = incident.appointmentDate || incident.date || incident.scheduledDate;
-                      
+                      const appointmentDate = getIncidentDate(incident);
                       return (
                         <div
                           key={incident.id}
-                          className={`text-xs p-1 rounded cursor-pointer truncate ${
-                            incident.status === 'Completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : incident.status === 'In Progress'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                          className={`p-4 rounded-lg mb-2 cursor-pointer border-l-4 transition-all hover:shadow-md ${
+                            incident.status === "Completed"
+                              ? "bg-green-50 border-green-500 hover:bg-green-100"
+                              : incident.status === "In Progress"
+                              ? "bg-blue-50 border-blue-500 hover:bg-blue-100"
+                              : incident.status === "Cancelled"
+                              ? "bg-red-50 border-red-500 hover:bg-red-100"
+                              : "bg-yellow-50 border-yellow-500 hover:bg-yellow-100"
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -174,15 +262,79 @@ const Calendar = () => {
                             setShowIncidentModal(true);
                           }}
                         >
-                          {appointmentDate ? formatTime(appointmentDate) : 'No time'} - {patient?.name || 'Unknown Patient'}
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="font-semibold text-gray-900 text-lg">
+                                  {incident.title}
+                                </div>
+                                <span
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    incident.status === "Completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : incident.status === "In Progress"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : incident.status === "Cancelled"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}
+                                >
+                                  {incident.status}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-1">
+                                  <User size={14} />
+                                  {patient?.name || "Unknown Patient"}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock size={14} />
+                                  {appointmentDate
+                                    ? formatTime(appointmentDate)
+                                    : "No time set"}
+                                </div>
+                              </div>
+
+                              {incident.description && (
+                                <div className="mt-2 text-sm text-gray-700 line-clamp-2">
+                                  {incident.description}
+                                </div>
+                              )}
+
+                              {incident.cost && (
+                                <div className="mt-2 text-sm font-medium text-gray-900">
+                                  Cost: ₹{incident.cost}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 ml-4">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedIncident(incident);
+                                  setShowEditModal(true);
+                                }}
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedIncident(incident);
+                                  setShowIncidentModal(true);
+                                }}
+                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
-                    {dayIncidents.length > 3 && (
-                      <div className="text-xs text-gray-500 font-medium">
-                        +{dayIncidents.length - 3} more
-                      </div>
-                    )}
                   </div>
                 </div>
               );
@@ -193,238 +345,52 @@ const Calendar = () => {
     );
   };
 
-  // Week view component
-  const WeekView = () => {
-    const weekStart = startOfWeek(currentDate);
-    const weekDays = eachDayOfInterval({ 
-      start: weekStart, 
-      end: endOfWeek(currentDate) 
-    });
-
-    const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
-
-    return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {/* Week Header */}
-        <div className="grid grid-cols-8 gap-px bg-gray-200">
-          <div className="bg-gray-50 py-3 px-4"></div>
-          {weekDays.map((day) => (
-            <div key={day.toISOString()} className="bg-gray-50 py-3 px-4 text-center">
-              <div className="text-sm font-medium text-gray-900">{format(day, 'EEE')}</div>
-              <div className={`text-2xl font-bold ${isToday(day) ? 'text-blue-600' : 'text-gray-900'}`}>
-                {day.getDate()}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Week Body */}
-        <div className="grid grid-cols-8 gap-px bg-gray-200 max-h-[600px] overflow-y-auto">
-          {hours.map((hour) => (
-            <React.Fragment key={hour}>
-              {/* Time column */}
-              <div className="bg-gray-50 py-4 px-4 text-sm text-gray-500 font-medium">
-                {hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
-              </div>
-              
-              {/* Day columns */}
-              {weekDays.map((day) => {
-                const dayIncidents = getIncidentsForDate(day).filter(incident => {
-                  const appointmentDate = incident.appointmentDate || incident.date || incident.scheduledDate;
-                  if (!appointmentDate) return false;
-                  const incidentHour = new Date(appointmentDate).getHours();
-                  return incidentHour === hour;
-                });
-
-                return (
-                  <div
-                    key={`${day.toISOString()}-${hour}`}
-                    className="bg-white min-h-[60px] p-2 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => {
-                      const selectedDateTime = new Date(day);
-                      selectedDateTime.setHours(hour, 0, 0, 0);
-                      setSelectedDate(selectedDateTime);
-                      setShowAddModal(true);
-                    }}
-                  >
-                    {dayIncidents.map((incident) => {
-                      const patient = getPatientById(incident.patientId);
-                      return (
-                        <div
-                          key={incident.id}
-                          className={`text-xs p-2 rounded cursor-pointer mb-1 ${
-                            incident.status === 'Completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : incident.status === 'In Progress'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedIncident(incident);
-                            setShowIncidentModal(true);
-                          }}
-                        >
-                          <div className="font-medium truncate">{incident.title}</div>
-                          <div className="truncate">{patient?.name || 'Unknown Patient'}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // Day view component
-  const DayView = () => {
-    const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8 AM to 7 PM
-    const dayIncidents = getIncidentsForDate(currentDate);
-
-    return (
-      <div className="bg-white rounded-lg shadow">
-        {/* Day Header */}
-        <div className="border-b border-gray-200 p-4">
-          <div className="text-center">
-            <div className="text-sm font-medium text-gray-500">{format(currentDate, 'EEEE')}</div>
-            <div className={`text-3xl font-bold ${isToday(currentDate) ? 'text-blue-600' : 'text-gray-900'}`}>
-              {currentDate.getDate()}
-            </div>
-            <div className="text-sm text-gray-500">{format(currentDate, 'MMMM yyyy')}</div>
-          </div>
-        </div>
-
-        {/* Day Body */}
-        <div className="max-h-[600px] overflow-y-auto">
-          {hours.map((hour) => {
-            const hourIncidents = dayIncidents.filter(incident => {
-              const appointmentDate = incident.appointmentDate || incident.date || incident.scheduledDate;
-              if (!appointmentDate) return false;
-              const incidentHour = new Date(appointmentDate).getHours();
-              return incidentHour === hour;
-            });
-
-            return (
-              <div key={hour} className="flex border-b border-gray-100">
-                <div className="w-20 py-4 px-4 text-sm text-gray-500 font-medium border-r border-gray-100">
-                  {hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
-                </div>
-                <div 
-                  className="flex-1 min-h-[80px] p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => {
-                    const selectedDateTime = new Date(currentDate);
-                    selectedDateTime.setHours(hour, 0, 0, 0);
-                    setSelectedDate(selectedDateTime);
-                    setShowAddModal(true);
-                  }}
-                >
-                  {hourIncidents.map((incident) => {
-                    const patient = getPatientById(incident.patientId);
-                    const appointmentDate = incident.appointmentDate || incident.date || incident.scheduledDate;
-                    return (
-                      <div
-                        key={incident.id}
-                        className={`p-3 rounded-lg mb-2 cursor-pointer ${
-                          incident.status === 'Completed' 
-                            ? 'bg-green-100 border border-green-200' 
-                            : incident.status === 'In Progress'
-                            ? 'bg-blue-100 border border-blue-200'
-                            : 'bg-yellow-100 border border-yellow-200'
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedIncident(incident);
-                          setShowIncidentModal(true);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium text-gray-900">{incident.title}</div>
-                            <div className="text-sm text-gray-600">{patient?.name || 'Unknown Patient'}</div>
-                            <div className="text-xs text-gray-500">
-                              {appointmentDate ? formatTime(appointmentDate) : 'No time set'}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedIncident(incident);
-                                setShowEditModal(true);
-                              }}
-                              className="p-1 text-gray-400 hover:text-blue-600"
-                            >
-                              <Edit size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const handleEditIncident = async (updatedIncident) => {
-    try {
-      await updateIncident(selectedIncident.id, updatedIncident);
-      setShowEditModal(false);
-      setSelectedIncident(null);
-    } catch (error) {
-      console.error('Error in handleEditIncident:', error);
-    }
-  };
-
-  const getViewTitle = () => {
-    if (view === 'month') {
-      return format(currentDate, 'MMMM yyyy');
-    } else if (view === 'week') {
-      const weekStart = startOfWeek(currentDate);
-      const weekEnd = endOfWeek(currentDate);
-      return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
-    } else {
-      return format(currentDate, 'MMMM d, yyyy');
-    }
-  };
-
-  const renderCurrentView = () => {
-    switch (view) {
-      case 'month':
-        return <MonthView />;
-      case 'week':
-        return <WeekView />;
-      case 'day':
-        return <DayView />;
-      default:
-        return <MonthView />;
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
-          <p className="text-gray-600">Manage appointments and schedule</p>
+          <h1 className="text-3xl font-bold text-gray-900">Calendar</h1>
+          <p className="text-gray-600 mt-1">
+            Manage your daily appointments and schedule
+          </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
+          {/* Search Bar */}
+          <div className="relative w-64">
+            {/* Search Icon */}
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+
+            {/* Input Field */}
+            <input
+              type="text"
+              placeholder="Search appointments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full py-2 pl-10 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            {/* Clear Button */}
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
           {/* Filter Dropdown */}
           <div className="relative">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="form-input pr-8 text-sm"
+              className="form-input pl-3 pr-10 text-sm appearance-none bg-white"
             >
               <option value="all">All Status</option>
               <option value="Scheduled">Scheduled</option>
@@ -432,7 +398,10 @@ const Calendar = () => {
               <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
             </select>
-            <Filter size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Filter
+              size={16}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
           </div>
 
           {/* Add Appointment Button */}
@@ -449,58 +418,63 @@ const Calendar = () => {
         </div>
       </div>
 
-      {/* Calendar Controls */}
+      {/* Enhanced Navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        {/* Navigation */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigateDate('prev')}
+              onClick={() => navigateDate("prev")}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Previous day"
             >
               <ChevronLeft size={20} />
             </button>
             <button
-              onClick={() => navigateDate('next')}
+              onClick={() => navigateDate("next")}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Next day"
             >
               <ChevronRight size={20} />
             </button>
           </div>
-          
-          <h2 className="text-xl font-semibold text-gray-900 min-w-[200px]">
-            {getViewTitle()}
-          </h2>
-          
-          <button
-            onClick={goToToday}
-            className="btn-secondary text-sm"
-          >
-            Today
-          </button>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="date"
+              value={format(currentDate, "yyyy-MM-dd")}
+              onChange={(e) => goToDate(e.target.value)}
+              className="form-input text-sm"
+            />
+            <button onClick={goToToday} className="btn-secondary text-sm">
+              Today
+            </button>
+          </div>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center bg-gray-100 rounded-lg p-1">
-          {['month', 'week', 'day'].map((viewType) => (
-            <button
-              key={viewType}
-              onClick={() => setView(viewType)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors capitalize ${
-                view === viewType
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {viewType}
-            </button>
-          ))}
+        {/* View Info */}
+        <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-yellow-200 rounded-full"></div>
+            <span>Scheduled</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-blue-200 rounded-full"></div>
+            <span>In Progress</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-200 rounded-full"></div>
+            <span>Completed</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-200 rounded-full"></div>
+            <span>Cancelled</span>
+          </div>
         </div>
       </div>
 
       {/* Calendar View */}
       <div className="fade-in">
-        {renderCurrentView()}
+        <DayView />
       </div>
 
       {/* Add Appointment Modal */}
@@ -537,61 +511,96 @@ const Calendar = () => {
           title="Appointment Details"
           size="large"
         >
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-sm font-medium text-gray-500">Title</label>
-                <p className="text-gray-900 font-medium">{selectedIncident.title}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Patient</label>
-                <p className="text-gray-900">{getPatientById(selectedIncident.patientId)?.name || 'Unknown Patient'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Date & Time</label>
-                <p className="text-gray-900">
-                  {selectedIncident.appointmentDate 
-                    ? `${formatDate(selectedIncident.appointmentDate)} at ${formatTime(selectedIncident.appointmentDate)}`
-                    : 'No date/time set'
-                  }
+                <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Title
+                </label>
+                <p className="text-gray-900 font-semibold text-lg mt-1">
+                  {selectedIncident.title}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Status</label>
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                  selectedIncident.status === 'Completed' 
-                    ? 'bg-green-100 text-green-800' 
-                    : selectedIncident.status === 'In Progress'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {selectedIncident.status}
-                </span>
+                <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Patient
+                </label>
+                <p className="text-gray-900 font-medium mt-1">
+                  {getPatientById(selectedIncident.patientId)?.name ||
+                    "Unknown Patient"}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Date & Time
+                </label>
+                <p className="text-gray-900 font-medium mt-1">
+                  {(() => {
+                    const appointmentDate = getIncidentDate(selectedIncident);
+                    return appointmentDate
+                      ? `${formatDate(appointmentDate)} at ${formatTime(
+                          appointmentDate
+                        )}`
+                      : "No date/time set";
+                  })()}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Status
+                </label>
+                <div className="mt-1">
+                  <span
+                    className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${
+                      selectedIncident.status === "Completed"
+                        ? "bg-green-100 text-green-800"
+                        : selectedIncident.status === "In Progress"
+                        ? "bg-blue-100 text-blue-800"
+                        : selectedIncident.status === "Cancelled"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
+                    {selectedIncident.status}
+                  </span>
+                </div>
               </div>
             </div>
-            
+
             {selectedIncident.description && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Description</label>
-                <p className="text-gray-900">{selectedIncident.description}</p>
+                <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Description
+                </label>
+                <p className="text-gray-900 mt-1 leading-relaxed">
+                  {selectedIncident.description}
+                </p>
               </div>
             )}
-            
+
             {selectedIncident.comments && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Comments</label>
-                <p className="text-gray-900">{selectedIncident.comments}</p>
+                <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Comments
+                </label>
+                <p className="text-gray-900 mt-1 leading-relaxed">
+                  {selectedIncident.comments}
+                </p>
               </div>
             )}
 
             {selectedIncident.cost && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Cost</label>
-                <p className="text-gray-900 font-medium">${selectedIncident.cost}</p>
+                <label className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Cost
+                </label>
+                <p className="text-gray-900 font-bold text-xl mt-1">
+                  ₹{selectedIncident.cost}
+                </p>
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 pt-6 border-t">
               <button
                 onClick={() => {
                   setShowIncidentModal(false);
@@ -609,7 +618,7 @@ const Calendar = () => {
                 className="btn-primary flex items-center gap-2"
               >
                 <Edit size={16} />
-                Edit
+                Edit Appointment
               </button>
             </div>
           </div>
