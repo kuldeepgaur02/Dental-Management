@@ -5,7 +5,7 @@ A comprehensive dental center management dashboard built with React, Vite, and T
 ## 🚀 Live Demo
 
 - **Deployed Application**: 
-- **GitHub Repository**: 
+- **GitHub Repository**: https://github.com/kuldeepgaur02/Dental-Management 
 
 ## 👥 Demo Credentials
 
