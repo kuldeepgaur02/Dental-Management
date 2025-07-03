@@ -4,7 +4,7 @@ A comprehensive dental center management dashboard built with React, Vite, and T
 
 ## 🚀 Live Demo
 
-- **Deployed Application**: 
+- **Deployed Application**: dental-management-kappa.vercel.app
 - **GitHub Repository**: https://github.com/kuldeepgaur02/Dental-Management 
 
 ## 👥 Demo Credentials
@@ -223,18 +223,6 @@ dental-center-management/
 - **Memoization**: React.memo for expensive components
 - **Debouncing**: Search input debouncing
 - **File Optimization**: Image compression before storage
-
-
-## 🚀 Deployment
-
-### Vercel Deployment
-```bash
-npm run build
-vercel --prod
-```
-
-
-
 ---
 
-**Built with ❤️ using React, Vite, and Tailwind CSS**
+**Built using React, Vite, and Tailwind CSS**
