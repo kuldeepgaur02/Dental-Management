@@ -5,7 +5,7 @@ import { Bell, Settings, User, LogOut, Search, Menu, Calendar, FileText, Phone, 
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const { patients, incidents } = useData();
+  const { patients, incidents, getPatientByUserId } = useData();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,7 +18,7 @@ const Header = () => {
     setShowProfileMenu(false);
   };
 
-  // Enhanced search functionality
+  // Enhanced search functionality with role-based filtering
   const performSearch = (query) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -29,69 +29,106 @@ const Header = () => {
     const results = [];
     const searchTerm = query.toLowerCase();
 
-    // Search patients
-    patients.forEach(patient => {
-      const matchScore = [];
+    // For patients, only search their own data
+    if (user?.role === 'Patient') {
+      const currentPatient = getPatientByUserId(user.id);
+      if (!currentPatient) return;
+
+      // Search patient's own appointments/incidents
+      const patientIncidents = incidents.filter(incident => incident.patientId === currentPatient.id);
       
-      if (patient.name.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Name');
-      }
-      if (patient.email.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Email');
-      }
-      if (patient.contact.includes(searchTerm)) {
-        matchScore.push('Phone');
-      }
-      if (patient.id.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Patient ID');
-      }
-      if (patient.address.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Address');
-      }
+      patientIncidents.forEach(incident => {
+        const matchScore = [];
 
-      if (matchScore.length > 0) {
-        results.push({
-          ...patient,
-          type: 'patient',
-          matchType: 'Patient',
-          matchedFields: matchScore,
-          icon: User
-        });
-      }
-    });
+        if (incident.title.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Treatment');
+        }
+        if (incident.description.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Description');
+        }
+        if (incident.treatment.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Treatment Type');
+        }
+        if (incident.status.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Status');
+        }
 
-    // Search appointments/incidents
-    incidents.forEach(incident => {
-      const patient = patients.find(p => p.id === incident.patientId);
-      const matchScore = [];
+        if (matchScore.length > 0) {
+          results.push({
+            ...incident,
+            patientName: currentPatient.name,
+            type: 'appointment',
+            matchType: 'My Appointment',
+            matchedFields: matchScore,
+            icon: Calendar
+          });
+        }
+      });
+    } else {
+      // For admin, search all patients and incidents (original logic)
+      patients.forEach(patient => {
+        const matchScore = [];
+        
+        if (patient.name.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Name');
+        }
+        if (patient.email.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Email');
+        }
+        if (patient.contact.includes(searchTerm)) {
+          matchScore.push('Phone');
+        }
+        if (patient.id.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Patient ID');
+        }
+        if (patient.address.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Address');
+        }
 
-      if (patient && patient.name.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Patient Name');
-      }
-      if (incident.title.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Treatment');
-      }
-      if (incident.description.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Description');
-      }
-      if (incident.treatment.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Treatment Type');
-      }
-      if (incident.status.toLowerCase().includes(searchTerm)) {
-        matchScore.push('Status');
-      }
+        if (matchScore.length > 0) {
+          results.push({
+            ...patient,
+            type: 'patient',
+            matchType: 'Patient',
+            matchedFields: matchScore,
+            icon: User
+          });
+        }
+      });
 
-      if (matchScore.length > 0) {
-        results.push({
-          ...incident,
-          patientName: patient ? patient.name : 'Unknown Patient',
-          type: 'appointment',
-          matchType: 'Appointment',
-          matchedFields: matchScore,
-          icon: Calendar
-        });
-      }
-    });
+      // Search appointments/incidents for admin
+      incidents.forEach(incident => {
+        const patient = patients.find(p => p.id === incident.patientId);
+        const matchScore = [];
+
+        if (patient && patient.name.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Patient Name');
+        }
+        if (incident.title.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Treatment');
+        }
+        if (incident.description.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Description');
+        }
+        if (incident.treatment.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Treatment Type');
+        }
+        if (incident.status.toLowerCase().includes(searchTerm)) {
+          matchScore.push('Status');
+        }
+
+        if (matchScore.length > 0) {
+          results.push({
+            ...incident,
+            patientName: patient ? patient.name : 'Unknown Patient',
+            type: 'appointment',
+            matchType: 'Appointment',
+            matchedFields: matchScore,
+            icon: Calendar
+          });
+        }
+      });
+    }
 
     // Sort results by relevance (more matches = higher priority)
     results.sort((a, b) => b.matchedFields.length - a.matchedFields.length);
@@ -138,14 +175,30 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Generate notifications for appointment status changes and same-day appointments
+  // Generate role-based notifications
   const generateNotifications = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     
+    let relevantIncidents = [];
+    let relevantPatients = [];
+
+    if (user?.role === 'Patient') {
+      // For patients, only show their own appointments and notifications
+      const currentPatient = getPatientByUserId(user.id);
+      if (currentPatient) {
+        relevantIncidents = incidents.filter(incident => incident.patientId === currentPatient.id);
+        relevantPatients = [currentPatient]; // Only their own patient record
+      }
+    } else {
+      // For admin, show all incidents and patients
+      relevantIncidents = incidents;
+      relevantPatients = patients;
+    }
+
     // Same-day appointments
-    const todayAppointments = incidents
+    const todayAppointments = relevantIncidents
       .filter(incident => {
         const appointmentDate = new Date(incident.appointmentDate);
         return appointmentDate >= today && appointmentDate < tomorrow;
@@ -169,8 +222,10 @@ const Header = () => {
         
         return {
           id: `today_${incident.id}`,
-          title: 'Today\'s Appointment',
-          message: `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
+          title: user?.role === 'Patient' ? 'Your Appointment Today' : 'Today\'s Appointment',
+          message: user?.role === 'Patient' 
+            ? `${incident.title} - ${timeMessage}`
+            : `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
           time: timeMessage,
           unread: true,
           priority: timeDiff < 60 * 60 * 1000 ? 'high' : 'normal', // High priority if within 1 hour
@@ -178,11 +233,9 @@ const Header = () => {
         };
       });
 
-    // Status change notifications (simulated based on recent updates)
-    const statusChangeNotifications = incidents
+    // Status change notifications
+    const statusChangeNotifications = relevantIncidents
       .filter(incident => {
-        // Simulate recent status changes by checking incidents modified in last 24 hours
-        // In real app, you'd track actual status changes with timestamps
         const createdDate = new Date(incident.createdAt);
         const timeDiff = now.getTime() - createdDate.getTime();
         return timeDiff <= 24 * 60 * 60 * 1000 && incident.status !== 'Scheduled';
@@ -195,28 +248,30 @@ const Header = () => {
           case 'Completed':
             statusIcon = '✅';
             statusColor = 'text-green-600';
-            statusMessage = 'Treatment completed';
+            statusMessage = user?.role === 'Patient' ? 'Your treatment completed' : 'Treatment completed';
             break;
           case 'In Progress':
             statusIcon = '🔄';
             statusColor = 'text-blue-600';
-            statusMessage = 'Treatment in progress';
+            statusMessage = user?.role === 'Patient' ? 'Your treatment in progress' : 'Treatment in progress';
             break;
           case 'Cancelled':
             statusIcon = '❌';
             statusColor = 'text-red-600';
-            statusMessage = 'Appointment cancelled';
+            statusMessage = user?.role === 'Patient' ? 'Your appointment cancelled' : 'Appointment cancelled';
             break;
           default:
             statusIcon = '📋';
             statusColor = 'text-gray-600';
-            statusMessage = 'Status updated';
+            statusMessage = user?.role === 'Patient' ? 'Your appointment status updated' : 'Status updated';
         }
         
         return {
           id: `status_${incident.id}`,
           title: 'Status Update',
-          message: `${patient?.name || 'Unknown Patient'} - ${statusMessage}`,
+          message: user?.role === 'Patient' 
+            ? `${statusMessage} - ${incident.title}`
+            : `${patient?.name || 'Unknown Patient'} - ${statusMessage}`,
           time: 'recently',
           unread: true,
           priority: 'normal',
@@ -227,7 +282,7 @@ const Header = () => {
       });
 
     // Upcoming appointments (next 2-24 hours)
-    const upcomingAppointments = incidents
+    const upcomingAppointments = relevantIncidents
       .filter(incident => {
         const appointmentDate = new Date(incident.appointmentDate);
         const timeDiff = appointmentDate.getTime() - now.getTime();
@@ -240,8 +295,10 @@ const Header = () => {
         
         return {
           id: `upcoming_${incident.id}`,
-          title: 'Upcoming Appointment',
-          message: `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
+          title: user?.role === 'Patient' ? 'Your Upcoming Appointment' : 'Upcoming Appointment',
+          message: user?.role === 'Patient' 
+            ? `${incident.title} - in ${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`
+            : `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
           time: `in ${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`,
           unread: true,
           priority: 'normal',
@@ -249,8 +306,8 @@ const Header = () => {
         };
       });
 
-    // New patient registrations
-    const recentPatients = patients
+    // New patient registrations (only for admin)
+    const recentPatients = user?.role === 'Admin' ? relevantPatients
       .filter(patient => {
         const createdDate = new Date(patient.createdAt);
         const timeDiff = now.getTime() - createdDate.getTime();
@@ -263,7 +320,7 @@ const Header = () => {
         time: 'today',
         unread: true,
         priority: 'normal'
-      }));
+      })) : [];
 
     // Combine and sort notifications by priority and time
     const allNotifications = [
@@ -305,7 +362,11 @@ const Header = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
-              placeholder="Search patients, appointments, treatments..."
+              placeholder={
+                user?.role === 'Patient' 
+                  ? "Search your appointments, treatments..." 
+                  : "Search patients, appointments, treatments..."
+              }
               value={searchQuery}
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
@@ -388,7 +449,12 @@ const Header = () => {
                 <div className="p-6 text-center">
                   <Search className="mx-auto h-8 w-8 text-gray-400 mb-2" />
                   <p className="text-sm text-gray-500">No results found for "{searchQuery}"</p>
-                  <p className="text-xs text-gray-400 mt-1">Try searching for patient names, emails, or treatments</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {user?.role === 'Patient' 
+                      ? "Try searching for your appointments or treatments"
+                      : "Try searching for patient names, emails, or treatments"
+                    }
+                  </p>
                 </div>
               </div>
             )}
@@ -417,7 +483,9 @@ const Header = () => {
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    {user?.role === 'Patient' ? 'Your Notifications' : 'Notifications'}
+                  </h3>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {notifications.length > 0 ? (
@@ -561,7 +629,11 @@ const Header = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
           <input
             type="text"
-            placeholder="Search patients, appointments..."
+            placeholder={
+              user?.role === 'Patient' 
+                ? "Search your appointments..." 
+                : "Search patients, appointments..."
+            }
             value={searchQuery}
             onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
