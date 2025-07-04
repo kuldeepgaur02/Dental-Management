@@ -175,27 +175,19 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Generate role-based notifications
+  // Generate role-based notifications (only for Admin)
   const generateNotifications = () => {
+    // Only generate notifications for Admin users
+    if (user?.role !== 'Admin') {
+      return [];
+    }
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     
-    let relevantIncidents = [];
-    let relevantPatients = [];
-
-    if (user?.role === 'Patient') {
-      // For patients, only show their own appointments and notifications
-      const currentPatient = getPatientByUserId(user.id);
-      if (currentPatient) {
-        relevantIncidents = incidents.filter(incident => incident.patientId === currentPatient.id);
-        relevantPatients = [currentPatient]; // Only their own patient record
-      }
-    } else {
-      // For admin, show all incidents and patients
-      relevantIncidents = incidents;
-      relevantPatients = patients;
-    }
+    let relevantIncidents = incidents;
+    let relevantPatients = patients;
 
     // Same-day appointments
     const todayAppointments = relevantIncidents
@@ -222,10 +214,8 @@ const Header = () => {
         
         return {
           id: `today_${incident.id}`,
-          title: user?.role === 'Patient' ? 'Your Appointment Today' : 'Today\'s Appointment',
-          message: user?.role === 'Patient' 
-            ? `${incident.title} - ${timeMessage}`
-            : `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
+          title: 'Today\'s Appointment',
+          message: `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
           time: timeMessage,
           unread: true,
           priority: timeDiff < 60 * 60 * 1000 ? 'high' : 'normal', // High priority if within 1 hour
@@ -248,30 +238,28 @@ const Header = () => {
           case 'Completed':
             statusIcon = '✅';
             statusColor = 'text-green-600';
-            statusMessage = user?.role === 'Patient' ? 'Your treatment completed' : 'Treatment completed';
+            statusMessage = 'Treatment completed';
             break;
           case 'In Progress':
             statusIcon = '🔄';
             statusColor = 'text-blue-600';
-            statusMessage = user?.role === 'Patient' ? 'Your treatment in progress' : 'Treatment in progress';
+            statusMessage = 'Treatment in progress';
             break;
           case 'Cancelled':
             statusIcon = '❌';
             statusColor = 'text-red-600';
-            statusMessage = user?.role === 'Patient' ? 'Your appointment cancelled' : 'Appointment cancelled';
+            statusMessage = 'Appointment cancelled';
             break;
           default:
             statusIcon = '📋';
             statusColor = 'text-gray-600';
-            statusMessage = user?.role === 'Patient' ? 'Your appointment status updated' : 'Status updated';
+            statusMessage = 'Status updated';
         }
         
         return {
           id: `status_${incident.id}`,
           title: 'Status Update',
-          message: user?.role === 'Patient' 
-            ? `${statusMessage} - ${incident.title}`
-            : `${patient?.name || 'Unknown Patient'} - ${statusMessage}`,
+          message: `${patient?.name || 'Unknown Patient'} - ${statusMessage}`,
           time: 'recently',
           unread: true,
           priority: 'normal',
@@ -295,10 +283,8 @@ const Header = () => {
         
         return {
           id: `upcoming_${incident.id}`,
-          title: user?.role === 'Patient' ? 'Your Upcoming Appointment' : 'Upcoming Appointment',
-          message: user?.role === 'Patient' 
-            ? `${incident.title} - in ${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`
-            : `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
+          title: 'Upcoming Appointment',
+          message: `${patient?.name || 'Unknown Patient'} - ${incident.title}`,
           time: `in ${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`,
           unread: true,
           priority: 'normal',
@@ -306,8 +292,8 @@ const Header = () => {
         };
       });
 
-    // New patient registrations (only for admin)
-    const recentPatients = user?.role === 'Admin' ? relevantPatients
+    // New patient registrations
+    const recentPatients = relevantPatients
       .filter(patient => {
         const createdDate = new Date(patient.createdAt);
         const timeDiff = now.getTime() - createdDate.getTime();
@@ -320,7 +306,7 @@ const Header = () => {
         time: 'today',
         unread: true,
         priority: 'normal'
-      })) : [];
+      }));
 
     // Combine and sort notifications by priority and time
     const allNotifications = [
@@ -463,112 +449,112 @@ const Header = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
-          {/* Notifications */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <Bell size={20} className={`${notifications.some(n => n.priority === 'high') ? 'text-red-500 animate-pulse' : 'text-gray-600'}`} />
-              {unreadCount > 0 && (
-                <span className={`absolute -top-1 -right-1 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
-                  notifications.some(n => n.priority === 'high') ? 'bg-red-500 animate-pulse' : 'bg-blue-500'
-                }`}>
-                  {unreadCount}
-                </span>
-              )}
-            </button>
+          {/* Notifications - Only show for Admin users */}
+          {user?.role === 'Admin' && (
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <Bell size={20} className={`${notifications.some(n => n.priority === 'high') ? 'text-red-500 animate-pulse' : 'text-gray-600'}`} />
+                {unreadCount > 0 && (
+                  <span className={`absolute -top-1 -right-1 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ${
+                    notifications.some(n => n.priority === 'high') ? 'bg-red-500 animate-pulse' : 'bg-blue-500'
+                  }`}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
 
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
-                <div className="p-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900">
-                    {user?.role === 'Patient' ? 'Your Notifications' : 'Notifications'}
-                  </h3>
-                </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {notifications.length > 0 ? (
-                    notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                          notification.unread ? 'bg-blue-50' : ''
-                        } ${notification.priority === 'high' ? 'border-l-4 border-l-red-500' : ''}`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className={`font-medium text-sm ${
-                                notification.priority === 'high' ? 'text-red-800' : 'text-gray-900'
+              {/* Notifications Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                  <div className="p-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                            notification.unread ? 'bg-blue-50' : ''
+                          } ${notification.priority === 'high' ? 'border-l-4 border-l-red-500' : ''}`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className={`font-medium text-sm ${
+                                  notification.priority === 'high' ? 'text-red-800' : 'text-gray-900'
+                                }`}>
+                                  {notification.title}
+                                  {notification.priority === 'high' && (
+                                    <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                                      URGENT
+                                    </span>
+                                  )}
+                                </h4>
+                                {notification.statusIcon && (
+                                  <span className="text-sm">{notification.statusIcon}</span>
+                                )}
+                              </div>
+                              <p className={`text-sm mt-1 ${
+                                notification.statusColor || 'text-gray-600'
                               }`}>
-                                {notification.title}
-                                {notification.priority === 'high' && (
-                                  <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-                                    URGENT
+                                {notification.message}
+                              </p>
+                              {notification.treatment && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Treatment: {notification.treatment}
+                                </p>
+                              )}
+                              <div className="flex items-center justify-between mt-2">
+                                <p className={`text-xs ${
+                                  notification.priority === 'high' ? 'text-red-600 font-medium' : 'text-gray-500'
+                                }`}>
+                                  {notification.time}
+                                </p>
+                                {notification.status && (
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    notification.status === 'Completed' 
+                                      ? 'bg-green-100 text-green-700'
+                                      : notification.status === 'In Progress'
+                                        ? 'bg-blue-100 text-blue-700'
+                                        : notification.status === 'Scheduled'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {notification.status}
                                   </span>
                                 )}
-                              </h4>
-                              {notification.statusIcon && (
-                                <span className="text-sm">{notification.statusIcon}</span>
-                              )}
+                              </div>
                             </div>
-                            <p className={`text-sm mt-1 ${
-                              notification.statusColor || 'text-gray-600'
-                            }`}>
-                              {notification.message}
-                            </p>
-                            {notification.treatment && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Treatment: {notification.treatment}
-                              </p>
+                            {notification.unread && (
+                              <div className={`w-2 h-2 rounded-full ${
+                                notification.priority === 'high' ? 'bg-red-500' : 'bg-blue-500'
+                              }`}></div>
                             )}
-                            <div className="flex items-center justify-between mt-2">
-                              <p className={`text-xs ${
-                                notification.priority === 'high' ? 'text-red-600 font-medium' : 'text-gray-500'
-                              }`}>
-                                {notification.time}
-                              </p>
-                              {notification.status && (
-                                <span className={`text-xs px-2 py-1 rounded-full ${
-                                  notification.status === 'Completed' 
-                                    ? 'bg-green-100 text-green-700'
-                                    : notification.status === 'In Progress'
-                                      ? 'bg-blue-100 text-blue-700'
-                                      : notification.status === 'Scheduled'
-                                        ? 'bg-yellow-100 text-yellow-700'
-                                        : 'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {notification.status}
-                                </span>
-                              )}
-                            </div>
                           </div>
-                          {notification.unread && (
-                            <div className={`w-2 h-2 rounded-full ${
-                              notification.priority === 'high' ? 'bg-red-500' : 'bg-blue-500'
-                            }`}></div>
-                          )}
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center text-gray-500">
+                        <Bell className="mx-auto h-8 w-8 text-gray-300 mb-2" />
+                        <p className="text-sm">No new notifications</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-6 text-center text-gray-500">
-                      <Bell className="mx-auto h-8 w-8 text-gray-300 mb-2" />
-                      <p className="text-sm">No new notifications</p>
+                    )}
+                  </div>
+                  {notifications.length > 0 && (
+                    <div className="p-4 text-center">
+                      <button className="text-blue-600 text-sm font-medium hover:text-blue-700">
+                        Todays Update 
+                      </button>
                     </div>
                   )}
                 </div>
-                {notifications.length > 0 && (
-                  <div className="p-4 text-center">
-                    <button className="text-blue-600 text-sm font-medium hover:text-blue-700">
-                      View all notifications
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Profile Menu */}
           <div className="relative">
