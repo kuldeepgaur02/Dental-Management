@@ -70,6 +70,8 @@ dental-center-management/
 │   │   │   ├── Modal.jsx            # Reusable modal component
 │   │   │   ├── FileUpload.jsx       # File upload functionality
 │   │   │   └── Loading.jsx          # Loading spinner component
+│   │   ├── analytics/
+│   │   │   └── analytics.js              # analytics mock data
 │   │   ├── auth/
 │   │   │   └── Login.jsx            # Authentication form
 │   │   ├── dashboard/
