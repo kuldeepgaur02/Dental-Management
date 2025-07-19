@@ -14,7 +14,7 @@ A comprehensive dental center management dashboard built with React, Vite, and T
 - **Password**: `admin123`
 
 ### Patient Access
-- **Email**: `john@entnt.in`
+- **Email**: `shyam@entnt.in`
 - **Password**: `patient123`
 
 ## ✨ Features
